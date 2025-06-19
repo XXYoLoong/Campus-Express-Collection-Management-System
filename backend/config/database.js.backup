@@ -34,7 +34,7 @@ async function testConnection() {
         console.log('\n示例：');
         console.log('   password: process.env.DB_PASSWORD || "your_password_here"');
         console.log('\n快速修复：');
-        console.log('   运行 quick_fix.bat 脚本自动配置密码');
+        console.log('   运行 fix_db.bat 脚本自动配置密码');
         process.exit(1);
     }
 }

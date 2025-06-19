@@ -15,8 +15,7 @@
 ├── database/          # 数据库脚本
 ├── backend/           # 后端API
 ├── frontend/          # 前端界面
-├── setup.bat          # Windows安装脚本
-├── setup.sh           # Linux/Mac安装脚本
+├── run.bat            # 统一启动脚本 (推荐)
 ├── package.json       # 项目配置
 └── README.md         # 项目说明
 ```
@@ -32,69 +31,46 @@
 
 ## 快速开始
 
-### 方法一：一键安装启动 (推荐)
+### 🚀 一键启动 (推荐)
 
 #### Windows用户
 ```bash
-# 1. 运行安装脚本
-setup.bat
-
-# 2. 安装完成后选择"立即启动系统"
-# 或者手动启动
-start.bat
+# 双击运行统一启动脚本
+run.bat
 ```
+
+然后选择：
+- **选项5**: 一键安装并启动 (推荐首次使用)
+- **选项1-4**: 分步执行 (适合调试)
 
 #### Linux/Mac用户
 ```bash
-# 1. 给脚本执行权限
+# 给脚本执行权限
 chmod +x setup.sh start.sh
 
-# 2. 运行安装脚本
+# 运行安装脚本
 ./setup.sh
 
-# 3. 启动系统
+# 启动系统
 ./start.sh
 ```
 
-### 方法二：手动安装
+### 📋 统一启动脚本功能
 
-#### 1. 环境要求
-- Node.js 14.0+
-- MySQL 8.0+
-- npm 6.0+
+`run.bat` 提供以下功能：
 
-#### 2. 安装依赖
-```bash
-# 安装后端依赖
-cd backend
-npm install
-cd ..
-```
+1. **环境检查** - 检查Node.js、项目文件、MySQL
+2. **安装依赖** - 安装后端npm依赖
+3. **数据库配置** - 配置MySQL连接和初始化数据库
+4. **启动系统** - 启动后端服务并打开浏览器
+5. **一键安装并启动** - 自动执行所有步骤 (推荐)
+6. **退出** - 安全退出程序
 
-#### 3. 数据库配置
-```bash
-# 连接MySQL
-mysql -u root -p
+### 🔒 安全特性
 
-# 创建数据库
-CREATE DATABASE express_delivery_system CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-
-# 退出MySQL
-exit
-
-# 初始化数据库
-mysql -u root -p express_delivery_system < database/init.sql
-```
-
-#### 4. 启动服务
-```bash
-# 启动后端服务
-cd backend
-npm start
-
-# 新开终端，访问前端
-# 浏览器打开 http://localhost:3000
-```
+- **密码不保存**: 每次运行时用户手动输入MySQL密码
+- **临时使用**: 密码仅在当前会话中使用，不会保存到文件
+- **安全输入**: 使用PowerShell隐藏密码输入
 
 ## 使用说明
 

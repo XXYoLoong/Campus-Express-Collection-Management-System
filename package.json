@@ -4,16 +4,10 @@
   "description": "学校快递任务代取管理系统",
   "main": "backend/server.js",
   "scripts": {
-    "install-deps": "cd backend && npm install",
-    "start": "cd backend && npm start",
+    "start": "run.bat",
     "dev": "cd backend && npm run dev",
-    "db-init": "echo '请运行 setup.bat (Windows) 或 ./setup.sh (Linux/Mac) 进行完整安装，或手动执行: mysql -u root -p < database/init.sql'",
-    "setup": "npm run install-deps && npm run db-init",
-    "setup-windows": "setup.bat",
-    "setup-linux": "chmod +x setup.sh && ./setup.sh",
-    "launch": "start.bat",
-    "launch-linux": "chmod +x start.sh && ./start.sh",
-    "postinstall": "echo '安装完成！请运行 npm run setup-windows (Windows) 或 npm run setup-linux (Linux/Mac) 进行完整设置'"
+    "install-deps": "cd backend && npm install",
+    "setup": "run.bat"
   },
   "keywords": [
     "express",
