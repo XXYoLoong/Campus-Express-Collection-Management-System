@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const { exec } = require('child_process');
 require('dotenv').config();
 
 const { testConnection } = require('./config/database');
@@ -46,6 +47,32 @@ app.use((err, req, res, next) => {
     res.status(500).json({ message: '服务器内部错误' });
 });
 
+// 打开浏览器函数
+function openBrowser(url) {
+    const platform = process.platform;
+    let command;
+    
+    switch (platform) {
+        case 'win32':
+            command = `start ${url}`;
+            break;
+        case 'darwin':
+            command = `open ${url}`;
+            break;
+        default:
+            command = `xdg-open ${url}`;
+            break;
+    }
+    
+    exec(command, (error) => {
+        if (error) {
+            console.log('无法自动打开浏览器，请手动访问:', url);
+        } else {
+            console.log('浏览器已自动打开:', url);
+        }
+    });
+}
+
 // 启动服务器
 async function startServer() {
     try {
@@ -56,6 +83,11 @@ async function startServer() {
             console.log(`服务器运行在端口 ${PORT}`);
             console.log(`前端地址: http://localhost:${PORT}`);
             console.log(`API地址: http://localhost:${PORT}/api`);
+            
+            // 等待2秒后打开浏览器，确保服务器完全启动
+            setTimeout(() => {
+                openBrowser(`http://localhost:${PORT}`);
+            }, 2000);
         });
     } catch (error) {
         console.error('启动服务器失败：', error);

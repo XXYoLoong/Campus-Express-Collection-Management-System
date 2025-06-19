@@ -1,33 +1,36 @@
 # 学校快递任务代取管理系统
 # Campus Express Collection Management System
 
-## 项目简介
-学校快递任务代取管理系统是一套面向校园学生和工作者的基于 MySQL 数据库的互动系统，为学校快递任务管理提供数据支撑。
+一个基于MySQL数据库的学校快递任务代取管理系统，支持用户注册登录、发布任务、接单、完成任务和评价功能。
 
-## 技术栈
-- 后端：Node.js + Express + MySQL
-- 前端：HTML + CSS + JavaScript
-- 数据库：MySQL 8.0+
+## 功能特性
 
-## 项目结构
+- 👤 **用户管理**: 用户注册、登录、个人信息管理
+- 📦 **任务管理**: 发布快递代取任务、查看任务列表、接单、完成任务
+- ⭐ **评价系统**: 对完成的任务进行评价和查看
+- 💰 **积分系统**: 任务完成获得积分奖励
+- 📊 **数据统计**: 任务统计、用户活跃度分析
+- 🔒 **安全认证**: JWT token认证、密码加密存储
+
+## 系统架构
+
 ```
 快递代取/
-├── database/          # 数据库脚本
-├── backend/           # 后端API
-├── frontend/          # 前端界面
-├── run.bat            # 统一启动脚本 (推荐)
-├── package.json       # 项目配置
+├── backend/          # 后端服务 (Node.js + Express)
+│   ├── config/       # 配置文件
+│   ├── middleware/   # 中间件
+│   ├── routes/       # 路由模块
+│   └── server.js     # 服务器入口
+├── database/         # 数据库脚本
+│   └── init.sql      # 数据库初始化脚本
+├── frontend/         # 前端界面 (HTML + CSS + JS)
+│   ├── index.html    # 主页面
+│   ├── styles.css    # 样式文件
+│   └── script.js     # 前端逻辑
+├── run.bat           # Windows统一启动脚本 (推荐)
+├── run.sh            # Linux/Mac统一启动脚本
 └── README.md         # 项目说明
 ```
-
-## 功能模块
-- 用户注册/登录
-- 发布任务
-- 查看待接任务列表
-- 接单功能
-- 完成/取消任务
-- 评价系统
-- 信誉分管理
 
 ## 快速开始
 
@@ -39,38 +42,61 @@
 run.bat
 ```
 
-然后选择：
-- **选项5**: 一键安装并启动 (推荐首次使用)
-- **选项1-4**: 分步执行 (适合调试)
-
 #### Linux/Mac用户
 ```bash
-# 给脚本执行权限
-chmod +x setup.sh start.sh
+# 给脚本添加执行权限
+chmod +x run.sh
 
-# 运行安装脚本
-./setup.sh
-
-# 启动系统
-./start.sh
+# 运行统一启动脚本
+./run.sh
 ```
 
-### 📋 统一启动脚本功能
-
-`run.bat` 提供以下功能：
-
-1. **环境检查** - 检查Node.js、项目文件、MySQL
-2. **安装依赖** - 安装后端npm依赖
-3. **数据库配置** - 配置MySQL连接和初始化数据库
+然后按照菜单提示选择：
+1. **环境检查** - 检查Node.js、MySQL等环境
+2. **安装依赖** - 安装后端依赖包
+3. **数据库初始化** - 初始化数据库和表结构
 4. **启动系统** - 启动后端服务并打开浏览器
-5. **一键安装并启动** - 自动执行所有步骤 (推荐)
-6. **退出** - 安全退出程序
+5. **一键完整安装并启动** - 自动执行所有步骤
 
-### 🔒 安全特性
+### 手动安装
 
-- **密码不保存**: 每次运行时用户手动输入MySQL密码
-- **临时使用**: 密码仅在当前会话中使用，不会保存到文件
-- **安全输入**: 使用PowerShell隐藏密码输入
+#### 1. 环境要求
+- Node.js 14.0+
+- MySQL 8.0+
+- npm 6.0+
+
+#### 2. 安装依赖
+```bash
+# 安装后端依赖
+cd backend
+npm install
+cd ..
+```
+
+#### 3. 数据库配置
+```bash
+# 连接MySQL
+mysql -u root -p
+
+# 创建数据库
+CREATE DATABASE express_delivery_system CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+# 退出MySQL
+exit
+
+# 初始化数据库
+mysql -u root -p express_delivery_system < database/init.sql
+```
+
+#### 4. 启动服务
+```bash
+# 启动后端服务
+cd backend
+npm start
+
+# 新开终端，访问前端
+# 浏览器打开 http://localhost:3000
+```
 
 ## 使用说明
 
@@ -226,6 +252,18 @@ npm start
 # 查看数据库日志
 mysql -u root -p -e "SHOW PROCESSLIST;"
 ```
+
+## 安全特性
+
+### 🔒 密码安全
+- **不保存密码**: 所有密码都是临时使用，不会保存在代码中
+- **隐藏输入**: 使用PowerShell隐藏密码输入
+- **临时配置**: 数据库配置仅在运行时临时创建
+
+### 🛡️ 数据保护
+- **JWT认证**: 使用JWT token进行用户认证
+- **密码加密**: 使用bcrypt加密存储用户密码
+- **SQL注入防护**: 使用参数化查询防止SQL注入
 
 ## 技术栈
 
