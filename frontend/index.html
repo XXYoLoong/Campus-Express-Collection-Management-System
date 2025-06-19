@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>学校快递任务代取管理系统</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <i class="fas fa-shipping-fast"></i>
+                <span>快递代取系统</span>
+            </div>
+            <div class="nav-menu" id="navMenu">
+                <a href="#" class="nav-link" data-page="home">首页</a>
+                <a href="#" class="nav-link" data-page="tasks">任务列表</a>
+                <a href="#" class="nav-link" data-page="publish">发布任务</a>
+                <a href="#" class="nav-link" data-page="my-tasks">我的任务</a>
+                <a href="#" class="nav-link" data-page="ratings">评价管理</a>
+                <a href="#" class="nav-link" data-page="profile">个人中心</a>
+            </div>
+            <div class="nav-auth" id="navAuth">
+                <button class="btn btn-primary" id="loginBtn">登录</button>
+                <button class="btn btn-secondary" id="registerBtn">注册</button>
+            </div>
+            <div class="nav-user" id="navUser" style="display: none;">
+                <span id="userInfo"></span>
+                <button class="btn btn-outline" id="logoutBtn">退出</button>
+            </div>
+            <div class="nav-toggle" id="navToggle">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主要内容区域 -->
+    <main class="main-content">
+        <!-- 首页 -->
+        <div id="homePage" class="page active">
+            <div class="hero-section">
+                <div class="hero-content">
+                    <h1>学校快递任务代取管理系统</h1>
+                    <p>为校园师生提供便捷的快递代取服务，让取快递变得简单高效</p>
+                    <div class="hero-buttons">
+                        <button class="btn btn-primary btn-large" onclick="showPage('tasks')">
+                            <i class="fas fa-search"></i> 浏览任务
+                        </button>
+                        <button class="btn btn-secondary btn-large" onclick="showPage('publish')">
+                            <i class="fas fa-plus"></i> 发布任务
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="features-section">
+                <h2>系统特色</h2>
+                <div class="features-grid">
+                    <div class="feature-card">
+                        <i class="fas fa-tasks"></i>
+                        <h3>任务管理</h3>
+                        <p>发布、接取、完成快递代取任务，流程清晰简单</p>
+                    </div>
+                    <div class="feature-card">
+                        <i class="fas fa-star"></i>
+                        <h3>信誉评价</h3>
+                        <p>完善的评价体系，保障服务质量</p>
+                    </div>
+                    <div class="feature-card">
+                        <i class="fas fa-shield-alt"></i>
+                        <h3>安全保障</h3>
+                        <p>实名认证，安全可靠</p>
+                    </div>
+                    <div class="feature-card">
+                        <i class="fas fa-mobile-alt"></i>
+                        <h3>便捷操作</h3>
+                        <p>响应式设计，随时随地使用</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 任务列表页面 -->
+        <div id="tasksPage" class="page">
+            <div class="page-header">
+                <h2>待接任务列表</h2>
+                <div class="page-actions">
+                    <button class="btn btn-primary" onclick="refreshTasks()">
+                        <i class="fas fa-refresh"></i> 刷新
+                    </button>
+                </div>
+            </div>
+            <div id="tasksList" class="tasks-grid">
+                <!-- 任务卡片将在这里动态生成 -->
+            </div>
+        </div>
+
+        <!-- 发布任务页面 -->
+        <div id="publishPage" class="page">
+            <div class="page-header">
+                <h2>发布新任务</h2>
+            </div>
+            <div class="form-container">
+                <form id="publishForm" class="form">
+                    <div class="form-group">
+                        <label for="company">快递公司 *</label>
+                        <select id="company" name="company" required>
+                            <option value="">请选择快递公司</option>
+                            <option value="顺丰快递">顺丰快递</option>
+                            <option value="圆通快递">圆通快递</option>
+                            <option value="中通快递">中通快递</option>
+                            <option value="申通快递">申通快递</option>
+                            <option value="韵达快递">韵达快递</option>
+                            <option value="百世快递">百世快递</option>
+                            <option value="京东物流">京东物流</option>
+                            <option value="其他">其他</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="pickupPlace">取件地点 *</label>
+                        <input type="text" id="pickupPlace" name="pickupPlace" required placeholder="如：第一教学楼快递点">
+                    </div>
+                    <div class="form-group">
+                        <label for="code">取件码 *</label>
+                        <input type="text" id="code" name="code" required placeholder="请输入取件码">
+                    </div>
+                    <div class="form-group">
+                        <label for="reward">酬金 (元) *</label>
+                        <input type="number" id="reward" name="reward" min="0.01" step="0.01" required placeholder="请输入酬金">
+                    </div>
+                    <div class="form-group">
+                        <label for="deadline">截止时间 *</label>
+                        <input type="datetime-local" id="deadline" name="deadline" required>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">发布任务</button>
+                        <button type="button" class="btn btn-secondary" onclick="showPage('home')">取消</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- 我的任务页面 -->
+        <div id="myTasksPage" class="page">
+            <div class="page-header">
+                <h2>我的任务</h2>
+                <div class="page-tabs">
+                    <button class="tab-btn active" data-tab="published">我发布的</button>
+                    <button class="tab-btn" data-tab="accepted">我接取的</button>
+                </div>
+            </div>
+            <div id="myTasksContent">
+                <div id="publishedTasks" class="tab-content active">
+                    <div id="publishedTasksList" class="tasks-grid">
+                        <!-- 发布的任务将在这里显示 -->
+                    </div>
+                </div>
+                <div id="acceptedTasks" class="tab-content">
+                    <div id="acceptedTasksList" class="tasks-grid">
+                        <!-- 接取的任务将在这里显示 -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 评价管理页面 -->
+        <div id="ratingsPage" class="page">
+            <div class="page-header">
+                <h2>评价管理</h2>
+            </div>
+            <div class="ratings-container">
+                <div class="ratings-section">
+                    <h3>我收到的评价</h3>
+                    <div id="receivedRatings" class="ratings-list">
+                        <!-- 收到的评价将在这里显示 -->
+                    </div>
+                </div>
+                <div class="ratings-section">
+                    <h3>我发出的评价</h3>
+                    <div id="givenRatings" class="ratings-list">
+                        <!-- 发出的评价将在这里显示 -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 个人中心页面 -->
+        <div id="profilePage" class="page">
+            <div class="page-header">
+                <h2>个人中心</h2>
+            </div>
+            <div class="profile-container">
+                <div class="profile-info">
+                    <h3>个人信息</h3>
+                    <div id="userProfile" class="profile-details">
+                        <!-- 用户信息将在这里显示 -->
+                    </div>
+                </div>
+                <div class="profile-actions">
+                    <h3>账户操作</h3>
+                    <button class="btn btn-primary" onclick="showChangePasswordModal()">
+                        <i class="fas fa-key"></i> 修改密码
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- 模态框 -->
+    <!-- 登录模态框 -->
+    <div id="loginModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>用户登录</h3>
+                <span class="close" onclick="closeModal('loginModal')">&times;</span>
+            </div>
+            <form id="loginForm" class="form">
+                <div class="form-group">
+                    <label for="loginUsername">用户名或邮箱</label>
+                    <input type="text" id="loginUsername" name="username" required>
+                </div>
+                <div class="form-group">
+                    <label for="loginPassword">密码</label>
+                    <input type="password" id="loginPassword" name="password" required>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">登录</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('loginModal')">取消</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 注册模态框 -->
+    <div id="registerModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>用户注册</h3>
+                <span class="close" onclick="closeModal('registerModal')">&times;</span>
+            </div>
+            <form id="registerForm" class="form">
+                <div class="form-group">
+                    <label for="registerUsername">用户名</label>
+                    <input type="text" id="registerUsername" name="username" required>
+                </div>
+                <div class="form-group">
+                    <label for="registerEmail">邮箱</label>
+                    <input type="email" id="registerEmail" name="email" required>
+                </div>
+                <div class="form-group">
+                    <label for="registerPhone">手机号</label>
+                    <input type="tel" id="registerPhone" name="phone" required>
+                </div>
+                <div class="form-group">
+                    <label for="registerPassword">密码</label>
+                    <input type="password" id="registerPassword" name="password" required>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">注册</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('registerModal')">取消</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 修改密码模态框 -->
+    <div id="changePasswordModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>修改密码</h3>
+                <span class="close" onclick="closeModal('changePasswordModal')">&times;</span>
+            </div>
+            <form id="changePasswordForm" class="form">
+                <div class="form-group">
+                    <label for="oldPassword">原密码</label>
+                    <input type="password" id="oldPassword" name="oldPassword" required>
+                </div>
+                <div class="form-group">
+                    <label for="newPassword">新密码</label>
+                    <input type="password" id="newPassword" name="newPassword" required>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">确认修改</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('changePasswordModal')">取消</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 评价模态框 -->
+    <div id="ratingModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>添加评价</h3>
+                <span class="close" onclick="closeModal('ratingModal')">&times;</span>
+            </div>
+            <form id="ratingForm" class="form">
+                <div class="form-group">
+                    <label for="ratingScore">评分</label>
+                    <select id="ratingScore" name="score" required>
+                        <option value="">请选择评分</option>
+                        <option value="5">5分 - 非常满意</option>
+                        <option value="4">4分 - 满意</option>
+                        <option value="3">3分 - 一般</option>
+                        <option value="2">2分 - 不满意</option>
+                        <option value="1">1分 - 非常不满意</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="ratingComment">评论</label>
+                    <textarea id="ratingComment" name="comment" rows="4" placeholder="请输入您的评价（可选）"></textarea>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">提交评价</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('ratingModal')">取消</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 加载提示 -->
+    <div id="loading" class="loading" style="display: none;">
+        <div class="loading-spinner"></div>
+        <p>加载中...</p>
+    </div>
+
+    <!-- 消息提示 -->
+    <div id="message" class="message" style="display: none;">
+        <span id="messageText"></span>
+        <button class="message-close" onclick="hideMessage()">&times;</button>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html> 
