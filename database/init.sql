@@ -72,6 +72,7 @@ CREATE TABLE IF NOT EXISTS Rating (
 CREATE OR REPLACE VIEW View_ReceivedTasks AS
 SELECT 
     t.tid,
+    t.publisherId,
     t.company,
     t.pickupPlace,
     t.code,
@@ -82,6 +83,7 @@ SELECT
     u.username as publisherName,
     u.phone as publisherPhone,
     ta.assignmentId,
+    ta.takerId,
     ta.acceptTime,
     ta.status as assignmentStatus,
     taker.username as takerName,
@@ -95,11 +97,13 @@ JOIN User taker ON ta.takerId = taker.uid;
 CREATE OR REPLACE VIEW View_AvailableTasks AS
 SELECT 
     t.tid,
+    t.publisherId,
     t.company,
     t.pickupPlace,
     t.code,
     t.reward,
     t.deadline,
+    t.status,
     t.createTime,
     u.username as publisherName,
     u.reputation as publisherReputation

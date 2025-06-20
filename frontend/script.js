@@ -505,22 +505,24 @@ function createTaskCard(task, type) {
     const isTaker = currentUser && task.takerId === currentUser.uid;
     
     let actions = '';
+    const taskStatus = task.status || task.taskStatus;
     
     if (type === 'available' && currentUser && !isPublisher) {
         actions = `<button class="btn btn-primary" onclick="acceptTask(${task.tid})">接单</button>`;
     } else if (type === 'published') {
-        if (task.status === '待接单') {
-            actions = `<button class="btn btn-secondary" onclick="deleteTask(${task.tid})">删除</button>`;
-        } else if (task.status === '已接单') {
-            actions = `<button class="btn btn-secondary" onclick="cancelTask(${task.tid}, 'publisher')">取消</button>`;
+        if (task.status === 'pending') {
+            actions = `<button class="btn btn-danger" onclick="deleteTask(${task.tid})">删除</button>`;
+        } else if (task.status === 'accepted') {
+            actions = `<button class="btn btn-warning" onclick="cancelTask(${task.tid}, 'publisher')">取消</button>`;
         }
     } else if (type === 'accepted') {
-        if (task.status === '进行中') {
+        if (task.assignmentStatus === 'in_progress') {
             actions = `
                 <button class="btn btn-primary" onclick="completeTask(${task.tid})">完成任务</button>
                 <button class="btn btn-secondary" onclick="cancelTask(${task.tid}, 'taker')">取消</button>
             `;
-        } else if (task.status === '已完成') {
+        } else if (task.assignmentStatus === 'completed') {
+            // 评价按钮逻辑：只有在任务完成后，且自己不是评价发起方时才显示
             const otherUserId = isPublisher ? task.takerId : task.publisherId;
             actions = `<button class="btn btn-primary" onclick="showRatingModal(${task.tid}, ${otherUserId})">评价</button>`;
         }
@@ -538,7 +540,7 @@ function createTaskCard(task, type) {
                 <p><strong>截止时间:</strong> ${formatDateTime(task.deadline)}</p>
                 <p><strong>发布者:</strong> ${task.publisherName || '未知'}</p>
                 ${task.takerName ? `<p><strong>接单者:</strong> ${task.takerName}</p>` : ''}
-                <p><strong>状态:</strong> <span class="task-status status-${getStatusClass(task.status)}">${getStatusText(task.status)}</span></p>
+                <p><strong>状态:</strong> <span class="task-status ${getStatusClass(taskStatus)}">${getStatusText(taskStatus, task.assignmentStatus)}</span></p>
             </div>
             <div class="task-actions">
                 ${actions}
@@ -553,6 +555,7 @@ function getStatusClass(status) {
         case 'pending':
             return 'status-pending';
         case 'accepted':
+        case 'in_progress':
             return 'status-accepted';
         case 'completed':
             return 'status-completed';
@@ -564,7 +567,10 @@ function getStatusClass(status) {
 }
 
 // 获取状态显示文本
-function getStatusText(status) {
+function getStatusText(status, assignmentStatus = null) {
+    if (status === 'accepted' && assignmentStatus === 'in_progress') {
+        return '进行中';
+    }
     switch (status) {
         case 'pending':
             return '待接单';
@@ -575,7 +581,7 @@ function getStatusText(status) {
         case 'cancelled':
             return '已取消';
         default:
-            return '待接单';
+            return '未知状态';
     }
 }
 
@@ -600,6 +606,7 @@ async function acceptTask(taskId) {
         if (response.ok) {
             showMessage('接单成功', 'success');
             loadAvailableTasks();
+            showPage('my-tasks');
         } else {
             showMessage(result.message || '接单失败', 'error');
         }
