@@ -18,17 +18,19 @@ echo 2. Install Dependencies
 echo 3. Initialize Database
 echo 4. Start System
 echo 5. Full Setup and Start
-echo 6. Exit
+echo 6. Reinitialize Database (Fix test accounts)
+echo 7. Exit
 echo.
 echo ========================================
-set /p choice=Enter your choice (1-6): 
+set /p choice=Enter your choice (1-7): 
 
 if "%choice%"=="1" goto check_env
 if "%choice%"=="2" goto install_deps
 if "%choice%"=="3" goto init_db
 if "%choice%"=="4" goto start_system
 if "%choice%"=="5" goto full_setup
-if "%choice%"=="6" goto exit_program
+if "%choice%"=="6" goto reinit_db
+if "%choice%"=="7" goto exit_program
 echo Invalid choice, please try again
 timeout /t 2 >nul
 goto main_menu
@@ -138,7 +140,8 @@ echo ========================================
 echo.
 
 echo Please enter MySQL root password (press Enter if no password):
-powershell -Command "$password = Read-Host -AsSecureString -Prompt 'MySQL Password'; $BSTR = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($password); $mysql_password = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR); Set-Content -Path 'temp_password.txt' -Value $mysql_password -NoNewline"
+echo Password will be hidden for security
+powershell -Command "$password = Read-Host -AsSecureString -Prompt 'MySQL Password (hidden)'; $BSTR = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($password); $mysql_password = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR); Set-Content -Path 'temp_password.txt' -Value $mysql_password -NoNewline"
 set /p mysql_password=<temp_password.txt
 del temp_password.txt
 
@@ -238,7 +241,8 @@ echo Browser will open automatically after successful connection
 echo.
 echo Please enter MySQL root password (press Enter if no password):
 echo Note: This is for initial configuration only
-powershell -Command "$password = Read-Host -AsSecureString -Prompt 'MySQL Password'; $BSTR = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($password); $mysql_password = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR); Set-Content -Path 'temp_password.txt' -Value $mysql_password -NoNewline"
+echo Password will be hidden for security
+powershell -Command "$password = Read-Host -AsSecureString -Prompt 'MySQL Password (hidden)'; $BSTR = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($password); $mysql_password = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR); Set-Content -Path 'temp_password.txt' -Value $mysql_password -NoNewline"
 set /p mysql_password=<temp_password.txt
 del temp_password.txt
 
@@ -461,7 +465,8 @@ if not exist "backend\node_modules" (
 echo.
 echo [3/4] Initialize database...
 echo Please enter MySQL root password (press Enter if no password):
-powershell -Command "$password = Read-Host -AsSecureString -Prompt 'MySQL Password'; $BSTR = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($password); $mysql_password = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR); Set-Content -Path 'temp_password.txt' -Value $mysql_password -NoNewline"
+echo Password will be hidden for security
+powershell -Command "$password = Read-Host -AsSecureString -Prompt 'MySQL Password (hidden)'; $BSTR = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($password); $mysql_password = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR); Set-Content -Path 'temp_password.txt' -Value $mysql_password -NoNewline"
 set /p mysql_password=<temp_password.txt
 del temp_password.txt
 
@@ -647,6 +652,73 @@ echo - Backend service runs in a separate window
 echo - Close backend window to stop service
 echo - If database connection fails, password will be requested interactively
 echo - Browser will open automatically after successful database connection
+echo.
+echo Press any key to return to main menu...
+pause >nul
+goto main_menu
+
+:reinit_db
+cls
+echo ========================================
+echo Reinitialize Database (Fix Test Accounts)
+echo ========================================
+echo.
+
+echo WARNING: This will delete all existing data and recreate the database!
+echo This is useful for fixing test account issues.
+echo.
+set /p confirm=Are you sure you want to continue? (y/n): 
+
+if /i not "%confirm%"=="y" goto main_menu
+
+echo.
+echo Please enter MySQL root password (press Enter if no password):
+echo Password will be hidden for security
+powershell -Command "$password = Read-Host -AsSecureString -Prompt 'MySQL Password (hidden)'; $BSTR = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($password); $mysql_password = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR); Set-Content -Path 'temp_password.txt' -Value $mysql_password -NoNewline"
+set /p mysql_password=<temp_password.txt
+del temp_password.txt
+
+echo.
+echo Dropping existing database...
+if "%mysql_password%"=="" (
+    mysql -u root -e "DROP DATABASE IF EXISTS express_delivery_system;"
+) else (
+    echo %mysql_password%| mysql -u root -p -e "DROP DATABASE IF EXISTS express_delivery_system;"
+)
+
+if %errorlevel% neq 0 (
+    echo ERROR: Failed to drop database
+    echo.
+    echo Press any key to return to main menu...
+    pause >nul
+    goto main_menu
+)
+
+echo SUCCESS: Database dropped
+
+echo.
+echo Reinitializing database with updated test accounts...
+if "%mysql_password%"=="" (
+    mysql -u root < database/init.sql
+) else (
+    echo %mysql_password%| mysql -u root -p < database/init.sql
+)
+
+if %errorlevel% neq 0 (
+    echo ERROR: Database reinitialization failed
+    echo.
+    echo Press any key to return to main menu...
+    pause >nul
+    goto main_menu
+)
+
+echo SUCCESS: Database reinitialization completed!
+echo.
+echo Updated test accounts:
+echo - Username: zhangsan, Password: password123
+echo - Username: lisi, Password: password123
+echo - Username: wangwu, Password: password123
+echo - Username: zhaoliu, Password: password123
 echo.
 echo Press any key to return to main menu...
 pause >nul

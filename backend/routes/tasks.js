@@ -1,6 +1,6 @@
 const express = require('express');
 const { body, validationResult } = require('express-validator');
-const { pool } = require('../config/database');
+const { getPool } = require('../config/database');
 const { authenticateToken } = require('../middleware/auth');
 
 const router = express.Router();
@@ -29,6 +29,8 @@ router.post('/', authenticateToken, [
             return res.status(400).json({ message: '截止时间必须在未来' });
         }
 
+        const pool = getPool();
+
         // 创建任务
         const [result] = await pool.execute(
             'INSERT INTO DeliveryTask (publisherId, company, pickupPlace, code, reward, deadline) VALUES (?, ?, ?, ?, ?, ?)',
@@ -54,6 +56,7 @@ router.post('/', authenticateToken, [
 // 获取待接任务列表
 router.get('/available', async (req, res) => {
     try {
+        const pool = getPool();
         const [tasks] = await pool.execute(
             'SELECT * FROM View_AvailableTasks ORDER BY createTime DESC'
         );
@@ -72,6 +75,7 @@ router.get('/available', async (req, res) => {
 router.get('/published', authenticateToken, async (req, res) => {
     try {
         const userId = req.user.uid;
+        const pool = getPool();
         const [tasks] = await pool.execute(
             'SELECT * FROM DeliveryTask WHERE publisherId = ? ORDER BY createTime DESC',
             [userId]
@@ -91,6 +95,7 @@ router.get('/published', authenticateToken, async (req, res) => {
 router.get('/accepted', authenticateToken, async (req, res) => {
     try {
         const userId = req.user.uid;
+        const pool = getPool();
         const [tasks] = await pool.execute(
             'SELECT * FROM View_ReceivedTasks WHERE takerId = ? ORDER BY acceptTime DESC',
             [userId]
@@ -111,6 +116,7 @@ router.post('/:taskId/accept', authenticateToken, async (req, res) => {
     try {
         const taskId = parseInt(req.params.taskId);
         const takerId = req.user.uid;
+        const pool = getPool();
 
         // 调用存储过程接单
         const [result] = await pool.execute(
@@ -137,6 +143,7 @@ router.post('/:taskId/complete', authenticateToken, async (req, res) => {
     try {
         const taskId = parseInt(req.params.taskId);
         const takerId = req.user.uid;
+        const pool = getPool();
 
         // 调用存储过程完成任务
         const [result] = await pool.execute(
@@ -172,6 +179,7 @@ router.post('/:taskId/cancel', authenticateToken, [
         const taskId = parseInt(req.params.taskId);
         const userId = req.user.uid;
         const { userType } = req.body;
+        const pool = getPool();
 
         // 调用存储过程取消任务
         const [result] = await pool.execute(
@@ -197,9 +205,10 @@ router.post('/:taskId/cancel', authenticateToken, [
 router.get('/:taskId', async (req, res) => {
     try {
         const taskId = parseInt(req.params.taskId);
+        const pool = getPool();
 
         const [tasks] = await pool.execute(
-            'SELECT dt.*, u.username as publisherName, u.phone as publisherPhone, u.reputation as publisherReputation FROM DeliveryTask dt JOIN User u ON dt.publisherId = u.uid WHERE dt.tid = ?',
+            'SELECT * FROM DeliveryTask WHERE tid = ?',
             [taskId]
         );
 
@@ -207,23 +216,9 @@ router.get('/:taskId', async (req, res) => {
             return res.status(404).json({ message: '任务不存在' });
         }
 
-        const task = tasks[0];
-
-        // 如果任务已被接取，获取接单者信息
-        if (task.status === '已接单' || task.status === '已完成') {
-            const [taskLogs] = await pool.execute(
-                'SELECT tl.*, u.username as takerName, u.phone as takerPhone FROM TaskLog tl JOIN User u ON tl.takerId = u.uid WHERE tl.taskId = ?',
-                [taskId]
-            );
-
-            if (taskLogs.length > 0) {
-                task.taskLog = taskLogs[0];
-            }
-        }
-
         res.json({
             message: '获取任务详情成功',
-            task
+            task: tasks[0]
         });
     } catch (error) {
         console.error('获取任务详情错误：', error);

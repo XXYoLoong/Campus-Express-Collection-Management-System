@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken');
-const { pool } = require('../config/database');
+const { getPool } = require('../config/database');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
@@ -16,6 +16,7 @@ const authenticateToken = async (req, res, next) => {
         const decoded = jwt.verify(token, JWT_SECRET);
         
         // 验证用户是否仍然存在
+        const pool = getPool();
         const [users] = await pool.execute(
             'SELECT uid, username, email, phone, reputation FROM User WHERE uid = ?',
             [decoded.uid]

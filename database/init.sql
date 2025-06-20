@@ -13,11 +13,11 @@ CREATE TABLE IF NOT EXISTS User (
     email VARCHAR(100) NOT NULL UNIQUE COMMENT '邮箱',
     phone VARCHAR(20) NOT NULL UNIQUE COMMENT '手机号',
     reputation DECIMAL(3,1) DEFAULT 5.0 COMMENT '信誉分',
-    registerTime TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '注册时间',
+    createTime TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '注册时间',
     INDEX idx_username (username),
     INDEX idx_email (email),
     INDEX idx_phone (phone)
-) COMMENT '用户表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='用户表';
 
 -- 2. 快递任务表 (DeliveryTask)
 CREATE TABLE IF NOT EXISTS DeliveryTask (
@@ -28,28 +28,28 @@ CREATE TABLE IF NOT EXISTS DeliveryTask (
     code VARCHAR(50) NOT NULL COMMENT '取件码',
     reward DECIMAL(8,2) NOT NULL COMMENT '酬金',
     deadline TIMESTAMP NOT NULL COMMENT '截止时间',
-    status ENUM('待接单', '已接单', '已完成', '已取消') DEFAULT '待接单' COMMENT '任务状态',
+    status ENUM('pending', 'accepted', 'completed', 'cancelled') DEFAULT 'pending' COMMENT '任务状态',
     createTime TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '发布时间',
     FOREIGN KEY (publisherId) REFERENCES User(uid) ON DELETE CASCADE,
     INDEX idx_publisher (publisherId),
     INDEX idx_status (status),
     INDEX idx_deadline (deadline)
-) COMMENT '快递任务表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='快递任务表';
 
--- 3. 任务接取记录表 (TaskLog)
-CREATE TABLE IF NOT EXISTS TaskLog (
-    logId INT AUTO_INCREMENT PRIMARY KEY COMMENT '接单记录ID',
+-- 3. 任务接取记录表 (TaskAssignment)
+CREATE TABLE IF NOT EXISTS TaskAssignment (
+    assignmentId INT AUTO_INCREMENT PRIMARY KEY COMMENT '接单记录ID',
     taskId INT NOT NULL UNIQUE COMMENT '任务ID',
     takerId INT NOT NULL COMMENT '接单者ID',
     acceptTime TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '接单时间',
     finishTime TIMESTAMP NULL COMMENT '完成时间',
-    status ENUM('进行中', '已完成', '已取消') DEFAULT '进行中' COMMENT '状态',
+    status ENUM('in_progress', 'completed', 'cancelled') DEFAULT 'in_progress' COMMENT '状态',
     FOREIGN KEY (taskId) REFERENCES DeliveryTask(tid) ON DELETE CASCADE,
     FOREIGN KEY (takerId) REFERENCES User(uid) ON DELETE CASCADE,
     INDEX idx_task (taskId),
     INDEX idx_taker (takerId),
     INDEX idx_status (status)
-) COMMENT '任务接取记录表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='任务接取记录表';
 
 -- 4. 评价表 (Rating)
 CREATE TABLE IF NOT EXISTS Rating (
@@ -66,7 +66,7 @@ CREATE TABLE IF NOT EXISTS Rating (
     INDEX idx_reviewer (reviewerId),
     INDEX idx_reviewee (revieweeId),
     INDEX idx_task (taskId)
-) COMMENT '评价表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='评价表';
 
 -- 创建视图：已接任务视图
 CREATE OR REPLACE VIEW View_ReceivedTasks AS
@@ -81,15 +81,15 @@ SELECT
     t.createTime,
     u.username as publisherName,
     u.phone as publisherPhone,
-    tl.logId,
-    tl.acceptTime,
-    tl.status as logStatus,
+    ta.assignmentId,
+    ta.acceptTime,
+    ta.status as assignmentStatus,
     taker.username as takerName,
     taker.phone as takerPhone
 FROM DeliveryTask t
 JOIN User u ON t.publisherId = u.uid
-JOIN TaskLog tl ON t.tid = tl.taskId
-JOIN User taker ON tl.takerId = taker.uid;
+JOIN TaskAssignment ta ON t.tid = ta.taskId
+JOIN User taker ON ta.takerId = taker.uid;
 
 -- 创建视图：待接任务视图
 CREATE OR REPLACE VIEW View_AvailableTasks AS
@@ -105,7 +105,7 @@ SELECT
     u.reputation as publisherReputation
 FROM DeliveryTask t
 JOIN User u ON t.publisherId = u.uid
-WHERE t.status = '待接单' AND t.deadline > NOW();
+WHERE t.status = 'pending' AND t.deadline > NOW();
 
 -- 创建视图：用户评价统计视图
 CREATE OR REPLACE VIEW View_UserRatingStats AS
@@ -139,7 +139,7 @@ BEGIN
     -- 检查任务是否存在且状态为待接单
     SELECT status, publisherId, reward INTO v_taskStatus, v_publisherId, v_reward
     FROM DeliveryTask 
-    WHERE tid = p_taskId AND status = '待接单' AND deadline > NOW()
+    WHERE tid = p_taskId AND status = 'pending' AND deadline > NOW()
     FOR UPDATE;
     
     IF v_taskStatus IS NULL THEN
@@ -152,10 +152,10 @@ BEGIN
     END IF;
     
     -- 更新任务状态
-    UPDATE DeliveryTask SET status = '已接单' WHERE tid = p_taskId;
+    UPDATE DeliveryTask SET status = 'accepted' WHERE tid = p_taskId;
     
     -- 创建接单记录
-    INSERT INTO TaskLog (taskId, takerId, status) VALUES (p_taskId, p_takerId, '进行中');
+    INSERT INTO TaskAssignment (taskId, takerId, status) VALUES (p_taskId, p_takerId, 'in_progress');
     
     COMMIT;
     
@@ -167,7 +167,7 @@ DELIMITER ;
 DELIMITER //
 CREATE PROCEDURE CompleteTask(IN p_taskId INT, IN p_takerId INT)
 BEGIN
-    DECLARE v_logId INT;
+    DECLARE v_assignmentId INT;
     DECLARE v_publisherId INT;
     DECLARE v_reward DECIMAL(8,2);
     DECLARE EXIT HANDLER FOR SQLEXCEPTION
@@ -179,21 +179,21 @@ BEGIN
     START TRANSACTION;
     
     -- 检查任务记录
-    SELECT logId, publisherId, reward INTO v_logId, v_publisherId, v_reward
-    FROM TaskLog tl
-    JOIN DeliveryTask dt ON tl.taskId = dt.tid
-    WHERE tl.taskId = p_taskId AND tl.takerId = p_takerId AND tl.status = '进行中'
+    SELECT ta.assignmentId, dt.publisherId, dt.reward INTO v_assignmentId, v_publisherId, v_reward
+    FROM TaskAssignment ta
+    JOIN DeliveryTask dt ON ta.taskId = dt.tid
+    WHERE ta.taskId = p_taskId AND ta.takerId = p_takerId AND ta.status = 'in_progress'
     FOR UPDATE;
     
-    IF v_logId IS NULL THEN
+    IF v_assignmentId IS NULL THEN
         SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = '任务记录不存在或状态不正确';
     END IF;
     
     -- 更新任务状态
-    UPDATE DeliveryTask SET status = '已完成' WHERE tid = p_taskId;
+    UPDATE DeliveryTask SET status = 'completed' WHERE tid = p_taskId;
     
     -- 更新接单记录
-    UPDATE TaskLog SET status = '已完成', finishTime = NOW() WHERE logId = v_logId;
+    UPDATE TaskAssignment SET status = 'completed', finishTime = NOW() WHERE assignmentId = v_assignmentId;
     
     COMMIT;
     
@@ -205,7 +205,7 @@ DELIMITER ;
 DELIMITER //
 CREATE PROCEDURE CancelTask(IN p_taskId INT, IN p_userId INT, IN p_userType ENUM('publisher', 'taker'))
 BEGIN
-    DECLARE v_logId INT;
+    DECLARE v_assignmentId INT;
     DECLARE v_takerId INT;
     DECLARE v_publisherId INT;
     DECLARE EXIT HANDLER FOR SQLEXCEPTION
@@ -218,39 +218,39 @@ BEGIN
     
     IF p_userType = 'publisher' THEN
         -- 发布者取消任务
-        SELECT logId, takerId INTO v_logId, v_takerId
-        FROM TaskLog tl
-        JOIN DeliveryTask dt ON tl.taskId = dt.tid
-        WHERE dt.tid = p_taskId AND dt.publisherId = p_userId AND tl.status = '进行中'
+        SELECT ta.assignmentId, ta.takerId INTO v_assignmentId, v_takerId
+        FROM TaskAssignment ta
+        JOIN DeliveryTask dt ON ta.taskId = dt.tid
+        WHERE dt.tid = p_taskId AND dt.publisherId = p_userId AND ta.status = 'in_progress'
         FOR UPDATE;
         
-        IF v_logId IS NULL THEN
+        IF v_assignmentId IS NULL THEN
             SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = '任务记录不存在或状态不正确';
         END IF;
         
         -- 更新任务状态
-        UPDATE DeliveryTask SET status = '已取消' WHERE tid = p_taskId;
+        UPDATE DeliveryTask SET status = 'cancelled' WHERE tid = p_taskId;
         
         -- 更新接单记录
-        UPDATE TaskLog SET status = '已取消' WHERE logId = v_logId;
+        UPDATE TaskAssignment SET status = 'cancelled' WHERE assignmentId = v_assignmentId;
         
     ELSE
         -- 接单者取消任务
-        SELECT logId, publisherId INTO v_logId, v_publisherId
-        FROM TaskLog tl
-        JOIN DeliveryTask dt ON tl.taskId = dt.tid
-        WHERE tl.taskId = p_taskId AND tl.takerId = p_userId AND tl.status = '进行中'
+        SELECT ta.assignmentId, dt.publisherId INTO v_assignmentId, v_publisherId
+        FROM TaskAssignment ta
+        JOIN DeliveryTask dt ON ta.taskId = dt.tid
+        WHERE ta.taskId = p_taskId AND ta.takerId = p_userId AND ta.status = 'in_progress'
         FOR UPDATE;
         
-        IF v_logId IS NULL THEN
+        IF v_assignmentId IS NULL THEN
             SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = '任务记录不存在或状态不正确';
         END IF;
         
         -- 更新任务状态
-        UPDATE DeliveryTask SET status = '待接单' WHERE tid = p_taskId;
+        UPDATE DeliveryTask SET status = 'pending' WHERE tid = p_taskId;
         
         -- 删除接单记录
-        DELETE FROM TaskLog WHERE logId = v_logId;
+        DELETE FROM TaskAssignment WHERE assignmentId = v_assignmentId;
     END IF;
     
     COMMIT;
@@ -301,18 +301,19 @@ BEGIN
 END //
 DELIMITER ;
 
--- 插入测试数据
+-- 插入测试数据（使用英文用户名和加密密码）
+-- 注意：这些密码是 'password123' 的bcrypt加密版本
 INSERT INTO User (username, password, email, phone, reputation) VALUES
-('张三', 'password123', 'zhangsan@example.com', '13800138001', 5.0),
-('李四', 'password123', 'lisi@example.com', '13800138002', 4.8),
-('王五', 'password123', 'wangwu@example.com', '13800138003', 4.5),
-('赵六', 'password123', 'zhaoliu@example.com', '13800138004', 4.2);
+('zhangsan', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'zhangsan@example.com', '13800138001', 5.0),
+('lisi', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'lisi@example.com', '13800138002', 4.8),
+('wangwu', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'wangwu@example.com', '13800138003', 4.5),
+('zhaoliu', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'zhaoliu@example.com', '13800138004', 4.2);
 
 INSERT INTO DeliveryTask (publisherId, company, pickupPlace, code, reward, deadline, status) VALUES
-(1, '顺丰快递', '第一教学楼快递点', 'SF123456', 5.00, DATE_ADD(NOW(), INTERVAL 2 DAY), '待接单'),
-(2, '圆通快递', '图书馆快递柜', 'YT789012', 8.00, DATE_ADD(NOW(), INTERVAL 1 DAY), '待接单'),
-(3, '中通快递', '学生公寓快递点', 'ZT345678', 6.00, DATE_ADD(NOW(), INTERVAL 3 DAY), '待接单'),
-(1, '申通快递', '食堂快递点', 'ST901234', 7.00, DATE_ADD(NOW(), INTERVAL 1 DAY), '待接单');
+(1, '顺丰快递', '第一教学楼快递点', 'SF123456', 5.00, DATE_ADD(NOW(), INTERVAL 2 DAY), 'pending'),
+(2, '圆通快递', '图书馆快递柜', 'YT789012', 8.00, DATE_ADD(NOW(), INTERVAL 1 DAY), 'pending'),
+(3, '中通快递', '学生公寓快递点', 'ZT345678', 6.00, DATE_ADD(NOW(), INTERVAL 3 DAY), 'pending'),
+(1, '申通快递', '食堂快递点', 'ST901234', 7.00, DATE_ADD(NOW(), INTERVAL 1 DAY), 'pending');
 
 -- 显示创建结果
 SELECT '数据库初始化完成！' as message; 

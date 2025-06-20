@@ -1,7 +1,7 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const { body, validationResult } = require('express-validator');
-const { pool } = require('../config/database');
+const { getPool } = require('../config/database');
 const { generateToken, authenticateToken } = require('../middleware/auth');
 
 const router = express.Router();
@@ -21,6 +21,7 @@ router.post('/register', [
         }
 
         const { username, password, email, phone } = req.body;
+        const pool = getPool();
 
         // 检查用户名是否已存在
         const [existingUsers] = await pool.execute(
@@ -80,6 +81,7 @@ router.post('/login', [
         }
 
         const { username, password } = req.body;
+        const pool = getPool();
 
         // 查找用户
         const [users] = await pool.execute(
@@ -146,6 +148,7 @@ router.put('/change-password', authenticateToken, [
 
         const { oldPassword, newPassword } = req.body;
         const userId = req.user.uid;
+        const pool = getPool();
 
         // 获取用户当前密码
         const [users] = await pool.execute(

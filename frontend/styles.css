@@ -127,6 +127,17 @@ body {
     color: #667eea;
 }
 
+.btn-warning {
+    background: #ffc107;
+    color: #212529;
+}
+
+.btn-warning:hover {
+    background: #e0a800;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(255, 193, 7, 0.4);
+}
+
 .btn-large {
     padding: 1rem 2rem;
     font-size: 1.1rem;
@@ -300,30 +311,30 @@ body {
 }
 
 .task-status {
-    padding: 0.25rem 0.75rem;
-    border-radius: 15px;
-    font-size: 0.9rem;
-    font-weight: bold;
+    padding: 0.25rem 0.5rem;
+    border-radius: 3px;
+    font-size: 0.875rem;
+    font-weight: 500;
 }
 
 .status-pending {
-    background: #ffc107;
-    color: #212529;
+    background-color: #fff3cd;
+    color: #856404;
 }
 
 .status-accepted {
-    background: #17a2b8;
-    color: white;
+    background-color: #d1ecf1;
+    color: #0c5460;
 }
 
 .status-completed {
-    background: #28a745;
-    color: white;
+    background-color: #d4edda;
+    color: #155724;
 }
 
 .status-cancelled {
-    background: #dc3545;
-    color: white;
+    background-color: #f8d7da;
+    color: #721c24;
 }
 
 /* 表单样式 */

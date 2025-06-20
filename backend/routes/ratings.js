@@ -1,6 +1,6 @@
 const express = require('express');
 const { body, validationResult } = require('express-validator');
-const { pool } = require('../config/database');
+const { getPool } = require('../config/database');
 const { authenticateToken } = require('../middleware/auth');
 
 const router = express.Router();
@@ -21,6 +21,7 @@ router.post('/', authenticateToken, [
 
         const { revieweeId, taskId, score, comment } = req.body;
         const reviewerId = req.user.uid;
+        const pool = getPool();
 
         // 检查是否不能评价自己
         if (reviewerId === revieweeId) {
@@ -75,6 +76,7 @@ router.post('/', authenticateToken, [
 router.get('/user/:userId', async (req, res) => {
     try {
         const userId = parseInt(req.params.userId);
+        const pool = getPool();
 
         // 获取用户收到的评价
         const [receivedRatings] = await pool.execute(
@@ -113,6 +115,7 @@ router.get('/user/:userId', async (req, res) => {
 router.get('/my-ratings', authenticateToken, async (req, res) => {
     try {
         const userId = req.user.uid;
+        const pool = getPool();
 
         // 获取我收到的评价
         const [receivedRatings] = await pool.execute(
@@ -151,6 +154,7 @@ router.get('/my-ratings', authenticateToken, async (req, res) => {
 router.get('/task/:taskId', async (req, res) => {
     try {
         const taskId = parseInt(req.params.taskId);
+        const pool = getPool();
 
         const [ratings] = await pool.execute(
             `SELECT r.*, 
@@ -180,6 +184,7 @@ router.get('/task/:taskId', async (req, res) => {
 router.get('/stats/:userId', async (req, res) => {
     try {
         const userId = parseInt(req.params.userId);
+        const pool = getPool();
 
         const [stats] = await pool.execute(
             'SELECT * FROM View_UserRatingStats WHERE uid = ?',
@@ -205,6 +210,7 @@ router.delete('/:ratingId', authenticateToken, async (req, res) => {
     try {
         const ratingId = parseInt(req.params.ratingId);
         const userId = req.user.uid;
+        const pool = getPool();
 
         // 检查评价是否存在且属于当前用户
         const [ratings] = await pool.execute(

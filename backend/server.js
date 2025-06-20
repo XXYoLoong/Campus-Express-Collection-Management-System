@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const { exec } = require('child_process');
+const net = require('net');
 require('dotenv').config();
 
 const { testConnection } = require('./config/database');
@@ -12,7 +13,7 @@ const taskRoutes = require('./routes/tasks');
 const ratingRoutes = require('./routes/ratings');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const DEFAULT_PORT = process.env.PORT || 3000;
 
 // 中间件
 app.use(cors());
@@ -47,6 +48,36 @@ app.use((err, req, res, next) => {
     res.status(500).json({ message: '服务器内部错误' });
 });
 
+// 检查端口是否可用
+function isPortAvailable(port) {
+    return new Promise((resolve) => {
+        const server = net.createServer();
+        
+        server.listen(port, () => {
+            server.once('close', () => {
+                resolve(true);
+            });
+            server.close();
+        });
+        
+        server.on('error', () => {
+            resolve(false);
+        });
+    });
+}
+
+// 查找可用端口
+async function findAvailablePort(startPort) {
+    let port = startPort;
+    while (!(await isPortAvailable(port))) {
+        port++;
+        if (port > startPort + 100) {
+            throw new Error('无法找到可用端口');
+        }
+    }
+    return port;
+}
+
 // 打开浏览器函数
 function openBrowser(url) {
     const platform = process.platform;
@@ -79,14 +110,21 @@ async function startServer() {
         // 测试数据库连接
         await testConnection();
         
-        app.listen(PORT, () => {
-            console.log(`服务器运行在端口 ${PORT}`);
-            console.log(`前端地址: http://localhost:${PORT}`);
-            console.log(`API地址: http://localhost:${PORT}/api`);
+        // 查找可用端口
+        const port = await findAvailablePort(DEFAULT_PORT);
+        
+        app.listen(port, () => {
+            console.log(`服务器运行在端口 ${port}`);
+            console.log(`前端地址: http://localhost:${port}`);
+            console.log(`API地址: http://localhost:${port}/api`);
+            
+            if (port !== DEFAULT_PORT) {
+                console.log(`注意：端口 ${DEFAULT_PORT} 被占用，已自动切换到端口 ${port}`);
+            }
             
             // 等待2秒后打开浏览器，确保服务器完全启动
             setTimeout(() => {
-                openBrowser(`http://localhost:${PORT}`);
+                openBrowser(`http://localhost:${port}`);
             }, 2000);
         });
     } catch (error) {

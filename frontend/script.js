@@ -36,17 +36,30 @@ function checkAuthStatus() {
         .then(response => {
             if (response.ok) {
                 return response.json();
+            } else if (response.status === 401 || response.status === 403) {
+                // Token无效，清除并重新登录
+                console.log('Token无效，需要重新登录');
+                localStorage.removeItem('token');
+                currentUser = null;
+                updateUIForLoggedOutUser();
+                showMessage('登录已过期，请重新登录', 'warning');
+                return null;
             } else {
-                throw new Error('Token无效');
+                throw new Error('Token验证失败');
             }
         })
         .then(data => {
-            currentUser = data.user;
-            updateUIForLoggedInUser();
+            if (data) {
+                currentUser = data.user;
+                updateUIForLoggedInUser();
+            }
         })
         .catch(error => {
             console.error('Token验证失败:', error);
-            logout();
+            localStorage.removeItem('token');
+            currentUser = null;
+            updateUIForLoggedOutUser();
+            showMessage('登录状态异常，请重新登录', 'warning');
         });
     } else {
         updateUIForLoggedOutUser();
@@ -78,6 +91,16 @@ function bindEventListeners() {
     document.getElementById('logoutBtn').addEventListener('click', function() {
         logout();
     });
+
+    // 清除缓存按钮（如果存在）
+    const clearCacheBtn = document.getElementById('clearCacheBtn');
+    if (clearCacheBtn) {
+        clearCacheBtn.addEventListener('click', function() {
+            if (confirm('确定要清除缓存并重新登录吗？')) {
+                clearCacheAndReload();
+            }
+        });
+    }
 
     // 移动端菜单切换
     document.getElementById('navToggle').addEventListener('click', function() {
@@ -308,6 +331,13 @@ async function handlePublishTask(e) {
             e.target.reset();
             setDefaultDeadline();
             showPage('my-tasks');
+        } else if (response.status === 401 || response.status === 403) {
+            // 认证失败，清除token并提示重新登录
+            localStorage.removeItem('token');
+            currentUser = null;
+            updateUIForLoggedOutUser();
+            showMessage('登录已过期，请重新登录后重试', 'error');
+            closeModal('publishModal');
         } else {
             showMessage(result.message || '发布失败', 'error');
         }
@@ -508,7 +538,7 @@ function createTaskCard(task, type) {
                 <p><strong>截止时间:</strong> ${formatDateTime(task.deadline)}</p>
                 <p><strong>发布者:</strong> ${task.publisherName || '未知'}</p>
                 ${task.takerName ? `<p><strong>接单者:</strong> ${task.takerName}</p>` : ''}
-                <p><strong>状态:</strong> <span class="task-status status-${getStatusClass(task.status)}">${task.status}</span></p>
+                <p><strong>状态:</strong> <span class="task-status status-${getStatusClass(task.status)}">${getStatusText(task.status)}</span></p>
             </div>
             <div class="task-actions">
                 ${actions}
@@ -519,12 +549,33 @@ function createTaskCard(task, type) {
 
 // 获取状态样式类
 function getStatusClass(status) {
-    switch(status) {
-        case '待接单': return 'pending';
-        case '已接单': return 'accepted';
-        case '已完成': return 'completed';
-        case '已取消': return 'cancelled';
-        default: return 'pending';
+    switch (status) {
+        case 'pending':
+            return 'status-pending';
+        case 'accepted':
+            return 'status-accepted';
+        case 'completed':
+            return 'status-completed';
+        case 'cancelled':
+            return 'status-cancelled';
+        default:
+            return 'status-pending';
+    }
+}
+
+// 获取状态显示文本
+function getStatusText(status) {
+    switch (status) {
+        case 'pending':
+            return '待接单';
+        case 'accepted':
+            return '已接单';
+        case 'completed':
+            return '已完成';
+        case 'cancelled':
+            return '已取消';
+        default:
+            return '待接单';
     }
 }
 
@@ -805,4 +856,14 @@ window.addEventListener('click', function(event) {
             modal.style.display = 'none';
         }
     });
-}); 
+});
+
+// 清除缓存并重新登录
+function clearCacheAndReload() {
+    // 清除localStorage
+    localStorage.clear();
+    // 清除sessionStorage
+    sessionStorage.clear();
+    // 重新加载页面
+    window.location.reload(true);
+} 

@@ -1,5 +1,6 @@
 const mysql = require('mysql2/promise');
 const readline = require('readline');
+const { execSync } = require('child_process');
 
 // 创建readline接口
 const rl = readline.createInterface({
@@ -28,6 +29,11 @@ let pool = mysql.createPool({
 // 更新数据库配置
 function updateDbConfig(newPassword) {
     dbConfig.password = newPassword;
+    // 关闭旧的连接池
+    if (pool) {
+        pool.end();
+    }
+    // 创建新的连接池
     pool = mysql.createPool({
         ...dbConfig,
         waitForConnections: true,
@@ -36,15 +42,31 @@ function updateDbConfig(newPassword) {
     });
 }
 
-// 交互式密码输入
+// 获取连接池（确保总是返回最新的连接池）
+function getPool() {
+    return pool;
+}
+
+// 安全的密码输入函数（使用PowerShell隐藏输入）
 function promptForPassword() {
     return new Promise((resolve) => {
         console.log('\n数据库连接失败，请输入MySQL root密码：');
         console.log('（如果没有密码请直接按回车）');
         
-        rl.question('MySQL Password: ', (password) => {
+        try {
+            // 使用PowerShell的Read-Host -AsSecureString来隐藏密码输入
+            const command = 'powershell -Command "$password = Read-Host -AsSecureString -Prompt \'MySQL Password (hidden)\'; $BSTR = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($password); $mysql_password = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR); Write-Output $mysql_password"';
+            
+            const password = execSync(command, { encoding: 'utf8' }).trim();
             resolve(password);
-        });
+        } catch (error) {
+            console.log('PowerShell密码输入失败，使用普通输入方式...');
+            console.log('注意：密码输入时不会隐藏，请注意周围环境安全');
+            
+            rl.question('MySQL Password: ', (password) => {
+                resolve(password);
+            });
+        }
     });
 }
 
@@ -102,7 +124,8 @@ async function testConnection() {
 }
 
 module.exports = {
-    pool,
+    pool: getPool(),
+    getPool,
     testConnection,
     updateDbConfig
 }; 
