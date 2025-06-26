@@ -161,7 +161,7 @@ CREATE TABLE IF NOT EXISTS Rating (
     -- 来源任务ID，关联任务表
     taskId INT NOT NULL COMMENT '来源任务ID - 评价来源的任务ID，关联DeliveryTask表的tid字段',
     
-    -- 评分，范围1-5分
+    -- 评分，范围1-5分，使用tinyint: 评分值范围极小,1字节够用了，比int4字节节省空间
     score TINYINT NOT NULL CHECK (score >= 1 AND score <= 5) COMMENT '分数 - 评价分数，范围1-5分，1分最差，5分最好',
     
     -- 评价内容，可选
