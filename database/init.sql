@@ -293,12 +293,17 @@ BEGIN
     DECLARE v_publisherId INT;           -- 发布者ID
     DECLARE v_reward DECIMAL(8,2);       -- 任务酬金
     
-    -- 异常处理：如果发生错误，回滚事务并重新抛出异常
+    -- 异常处理器：当 SQL 语句执行过程中出现异常（如插入失败、外键冲突等），自动触发
+    -- 执行步骤如下：
+    -- 1. 立即执行 ROLLBACK：撤销当前事务中已执行的所有数据库操作，确保数据不被“部分修改”，保持一致性；
+    -- 2. 执行 RESIGNAL：将异常重新抛出，让调用者（例如前端或服务端程序）收到明确的错误提示，不“悄悄失败”。
+    -- 此处理机制可防止数据处于“未提交挂起状态”，避免死锁或资源占用问题。
     DECLARE EXIT HANDLER FOR SQLEXCEPTION
     BEGIN
-        ROLLBACK;  -- 回滚事务
-        RESIGNAL;  -- 重新抛出异常
+        ROLLBACK;  -- 回滚事务，撤销所有更改
+        RESIGNAL;  -- 重新抛出异常，保证上层能感知错误
     END;
+
     
     -- 开始事务，确保数据一致性
     START TRANSACTION;
